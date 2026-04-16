@@ -4,7 +4,7 @@ import { profiles } from "../db/schema";
 import { fetchExternal } from "../services/external";
 import { getAgeGroup, getTopCountry } from "../utils/classifiers";
 import { v4 as uuidv4 } from "uuid";
-import { eq, ilike, and } from "drizzle-orm";
+import { eq, ilike, and, desc } from "drizzle-orm";
 
 const app = new Hono();
 
@@ -39,7 +39,14 @@ app.post("/", async (c) => {
   } catch (error: any) {
     console.error("Error creating profile:", error);
     
-    if (error.message?.includes("unique constraint") || error.code === '23505') {
+    const originalError = error.cause || error;
+    const isUniqueViolation = 
+      originalError.code === '23505' || 
+      originalError.message?.toLowerCase().includes("unique constraint") || 
+      originalError.message?.toLowerCase().includes("already exists") ||
+      originalError.constraint_name?.includes("unique");
+
+    if (isUniqueViolation) {
       return c.json({ error: "A profile with this name already exists" }, 409);
     }
     
@@ -53,22 +60,26 @@ app.get("/", async (c) => {
     const gender = c.req.query("gender");
     const ageGroup = c.req.query("age_group");
     const name = c.req.query("name");
+    const countryId = c.req.query("country_id");
 
-    let query = db.select().from(profiles);
+    let query = db.select().from(profiles).orderBy(desc(profiles.created_at));
     const conditions = [];
 
     if (gender) {
-      conditions.push(eq(profiles.gender, gender));
+      conditions.push(ilike(profiles.gender, gender));
     }
     if (ageGroup) {
-      conditions.push(eq(profiles.age_group, ageGroup));
+      conditions.push(ilike(profiles.age_group, ageGroup));
     }
     if (name) {
       conditions.push(ilike(profiles.name, `%${name}%`));
     }
+    if (countryId) {
+      conditions.push(ilike(profiles.country_id, countryId));
+    }
 
     if (conditions.length > 0) {
-      // @ts-ignore - Dynamic conditions in drizzle can be complex to type correctly here
+      // @ts-ignore
       query = query.where(and(...conditions));
     }
 
