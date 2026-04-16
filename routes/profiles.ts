@@ -35,7 +35,10 @@ app.post("/", async (c) => {
 
     await db.insert(profiles).values(newProfile);
     
-    return c.json(newProfile, 201);
+    return c.json({
+      status: "success",
+      data: newProfile
+    }, 201);
   } catch (error: any) {
     console.error("Error creating profile:", error);
     
@@ -84,7 +87,11 @@ app.get("/", async (c) => {
     }
 
     const result = await query;
-    return c.json(result);
+    return c.json({
+      status: "success",
+      count: result.length,
+      data: result
+    });
   } catch (error: any) {
     return c.json({ error: error.message || "Failed to fetch profiles" }, 500);
   }
@@ -99,7 +106,10 @@ app.get("/:id", async (c) => {
       return c.json({ error: "Profile not found" }, 404);
     }
     
-    return c.json(profile);
+    return c.json({
+      status: "success",
+      data: profile
+    });
   } catch (error: any) {
     return c.json({ error: error.message || "Failed to fetch profile" }, 500);
   }
@@ -110,7 +120,7 @@ app.delete("/:id", async (c) => {
     const id = c.req.param("id");
     await db.delete(profiles).where(eq(profiles.id, id));
     
-    return c.json({ message: "Profile deleted successfully" });
+    return c.body(null, 204);
   } catch (error: any) {
     return c.json({ error: error.message || "Failed to delete profile" }, 500);
   }
