@@ -9,12 +9,13 @@ import { eq, ilike, and, desc } from "drizzle-orm";
 const app = new Hono();
 
 app.post("/", async (c) => {
-  try {
-    const body = await c.req.json();
-    const { name } = body;
+    let name: string | undefined;
+    try {
+      const body = await c.req.json();
+      name = body.name;
     
     if (!name) {
-      return c.json({ error: "Name is required" }, 400);
+      return c.json({ status: "error", message: "Name is required" }, 400);
     }
 
     const { gender, age, nation } = await fetchExternal(name);
@@ -50,10 +51,23 @@ app.post("/", async (c) => {
       originalError.constraint_name?.includes("unique");
 
     if (isUniqueViolation) {
-      return c.json({ error: "A profile with this name already exists" }, 409);
+      const [existingProfile] = await db
+        .select()
+        .from(profiles)
+        .where(eq(profiles.name, name));
+      
+      if (existingProfile) {
+        return c.json({
+          status: "success",
+          data: existingProfile
+        }, 200);
+      }
     }
     
-    return c.json({ error: error.message || "Failed to create profile" }, 500);
+    return c.json({ 
+      status: "error", 
+      message: error.message || "Failed to create profile" 
+    }, 500);
   }
 });
 
@@ -93,7 +107,10 @@ app.get("/", async (c) => {
       data: result
     });
   } catch (error: any) {
-    return c.json({ error: error.message || "Failed to fetch profiles" }, 500);
+    return c.json({ 
+      status: "error", 
+      message: error.message || "Failed to fetch profiles" 
+    }, 500);
   }
 });
 
@@ -103,7 +120,7 @@ app.get("/:id", async (c) => {
     const [profile] = await db.select().from(profiles).where(eq(profiles.id, id));
     
     if (!profile) {
-      return c.json({ error: "Profile not found" }, 404);
+      return c.json({ status: "error", message: "Profile not found" }, 404);
     }
     
     return c.json({
@@ -111,7 +128,10 @@ app.get("/:id", async (c) => {
       data: profile
     });
   } catch (error: any) {
-    return c.json({ error: error.message || "Failed to fetch profile" }, 500);
+    return c.json({ 
+      status: "error", 
+      message: error.message || "Failed to fetch profile" 
+    }, 500);
   }
 });
 
@@ -122,7 +142,10 @@ app.delete("/:id", async (c) => {
     
     return c.body(null, 204);
   } catch (error: any) {
-    return c.json({ error: error.message || "Failed to delete profile" }, 500);
+    return c.json({ 
+      status: "error", 
+      message: error.message || "Failed to delete profile" 
+    }, 500);
   }
 });
 
