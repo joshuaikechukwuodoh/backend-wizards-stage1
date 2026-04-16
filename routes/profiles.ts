@@ -1,3 +1,7 @@
+/**
+ * Profile management routes for Backend Wizards Stage 1.
+ * Handles CRUD operations and metadata enrichment from external APIs.
+ */
 import { Hono } from "hono";
 import { db } from "../db";
 import { profiles } from "../db/schema";
@@ -51,10 +55,11 @@ app.post("/", async (c) => {
       originalError.constraint_name?.includes("unique");
 
     if (isUniqueViolation) {
+      // Find the existing profile to ensure full idempotency (return 200 OK)
       const [existingProfile] = await db
         .select()
         .from(profiles)
-        .where(eq(profiles.name, name));
+        .where(eq(profiles.name, name!));
       
       if (existingProfile) {
         return c.json({
@@ -64,10 +69,14 @@ app.post("/", async (c) => {
       }
     }
     
+    // Check if the error is from external services (likely an invalid name)
+    const isServiceError = error.message?.includes("returned an invalid response");
+    const statusCode = isServiceError ? 400 : 500;
+    
     return c.json({ 
       status: "error", 
       message: error.message || "Failed to create profile" 
-    }, 500);
+    }, statusCode);
   }
 });
 
