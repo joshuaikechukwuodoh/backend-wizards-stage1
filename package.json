@@ -1,0 +1,22 @@
+{
+  "name": "backend-wizards-stage1",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "^1.3.12",
+    "drizzle-kit": "^0.31.10"
+  },
+  "scripts": {
+    "dev": "bun run index.ts"
+  },
+  "peerDependencies": {
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.14",
+    "postgres": "^3.4.9",
+    "uuid": "^13.0.0"
+  }
+}
